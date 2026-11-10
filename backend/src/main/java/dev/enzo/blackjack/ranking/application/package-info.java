@@ -1,0 +1,1 @@
+package dev.enzo.blackjack.ranking.application;

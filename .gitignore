@@ -1,0 +1,45 @@
+# Java / Maven
+**/target/
+*.class
+*.jar
+*.war
+
+# Node.js / React / Vite
+**/node_modules/
+**/dist/
+**/.vite/
+**/coverage/
+*.tsbuildinfo
+
+# IntelliJ IDEA / IDE
+**/.idea/
+*.iml
+**/.vscode/
+**/.settings/
+**/.classpath
+**/.project
+
+# Variables de entorno y secretos
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+
+# Logs y archivos temporales
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Datos locales de bases de datos
+**/mysql-data/
+**/mongo-data/

@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: blackjack-game
+  profiles:
+    active: mongo,mysql
