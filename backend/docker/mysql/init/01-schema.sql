@@ -1,9 +1,12 @@
 CREATE TABLE IF NOT EXISTS players (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
+    normalized_name VARCHAR(100)
+        GENERATED ALWAYS AS (LOWER(TRIM(name))) STORED,
     wins INT NOT NULL DEFAULT 0,
     losses INT NOT NULL DEFAULT 0,
-    draws INT NOT NULL DEFAULT 0
+    draws INT NOT NULL DEFAULT 0,
+    CONSTRAINT uq_players_normalized_name UNIQUE (normalized_name)
 );
 
 CREATE TABLE IF NOT EXISTS round_results (

@@ -30,4 +30,10 @@ public class InMemoryPlayerRepository implements PlayerRepository {
         return Flux.defer(() -> Flux.fromIterable(players.values()));
     }
 
+    @Override
+    public Mono<Boolean> existsByNameIgnoreCase(String name) {
+        return Mono.fromSupplier(() -> players.values().stream()
+                .anyMatch(player -> player.getName().trim().equalsIgnoreCase(name.trim())));
+    }
+
 }

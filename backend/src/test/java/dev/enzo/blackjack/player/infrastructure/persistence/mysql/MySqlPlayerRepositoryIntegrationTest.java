@@ -1,5 +1,6 @@
 package dev.enzo.blackjack.player.infrastructure.persistence.mysql;
 
+import dev.enzo.blackjack.player.application.exception.DuplicatePlayerNameException;
 import dev.enzo.blackjack.player.domain.model.Player;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -77,6 +78,28 @@ class MySqlPlayerRepositoryIntegrationTest {
             assertEquals(3, savedPlayer.getLosses());
             assertEquals(2, savedPlayer.getDraws());
         }).verifyComplete();
+    }
+
+    @Test
+    void shouldRejectDuplicatePlayerNameIgnoringCaseAndSpaces() {
+        UUID firstId = UUID.randomUUID();
+        UUID secondId = UUID.randomUUID();
+
+        String name = "Player_" + firstId.toString().substring(0, 8);
+
+        Player firstPlayer = new Player(firstId, name);
+        Player duplicatePlayer = new Player(secondId, "  " + name.toUpperCase() + "  ");
+
+        createdPlayerIds.add(firstId);
+
+        StepVerifier.create(adapter.save(firstPlayer)).verifyComplete();
+
+        StepVerifier.create(adapter.save(duplicatePlayer)).expectError(DuplicatePlayerNameException.class).verify();
+
+        StepVerifier.create(adapter.findById(firstId)).assertNext(savedPlayer ->
+                        assertEquals(name, savedPlayer.getName())).verifyComplete();
+
+        StepVerifier.create(adapter.findById(secondId)).verifyComplete();
     }
 
 }

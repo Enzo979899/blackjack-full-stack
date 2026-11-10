@@ -1,8 +1,10 @@
 package dev.enzo.blackjack.player.infrastructure.persistence.mysql;
 
+import dev.enzo.blackjack.player.application.exception.DuplicatePlayerNameException;
 import dev.enzo.blackjack.player.application.port.out.PlayerRepository;
 import dev.enzo.blackjack.player.domain.model.Player;
 import org.springframework.context.annotation.Profile;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
@@ -26,14 +28,31 @@ public class MySqlPlayerRepositoryAdapter implements PlayerRepository {
         return Mono.defer(() -> {
             PlayerEntity entity = PlayerEntityMapper.toEntity(player);
 
-            return databaseClient.sql("""
-                            INSERT INTO players (id, name, wins, losses, draws)
-                            VALUES (:id, :name, :wins, :losses, :draws)
-                            ON DUPLICATE KEY UPDATE
-                                name = VALUES(name)
-                            """).bind("id", entity.getId()).bind("name", entity.getName())
-                    .bind("wins", entity.getWins()).bind("losses", entity.getLosses())
-                    .bind("draws", entity.getDraws()).fetch().rowsUpdated().then();
+            return repository.existsById(entity.getId()).flatMap(exists -> {
+                        if (exists) {
+                            return databaseClient.sql("""
+                                        UPDATE players
+                                        SET name = :name
+                                        WHERE id = :id
+                                        """)
+                                    .bind("id", entity.getId())
+                                    .bind("name", entity.getName())
+                                    .fetch()
+                                    .rowsUpdated()
+                                    .then();
+                        }
+
+                        return databaseClient.sql("""
+                                    INSERT INTO players (id, name, wins, losses, draws)
+                                    VALUES (:id, :name, :wins, :losses, :draws)
+                                    """)
+                                .bind("id", entity.getId()).bind("name", entity.getName())
+                                .bind("wins", entity.getWins()).bind("losses", entity.getLosses())
+                                .bind("draws", entity.getDraws()).fetch()
+                                .rowsUpdated().then()
+                                .onErrorMap(DuplicateKeyException.class, exception ->
+                                        new DuplicatePlayerNameException());
+                    });
         });
     }
 
@@ -45,6 +64,18 @@ public class MySqlPlayerRepositoryAdapter implements PlayerRepository {
     @Override
     public Flux<Player> findAll() {
         return repository.findAll().map(PlayerEntityMapper::toDomain);
+    }
+
+    @Override
+    public Mono<Boolean> existsByNameIgnoreCase(String name) {
+        return databaseClient.sql("""
+                    SELECT COUNT(*) AS total
+                    FROM players
+                    WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name))
+                    """)
+                .bind("name", name)
+                .map((row, metadata) ->
+                        ((Number) row.get("total")).longValue() > 0).one().defaultIfEmpty(false);
     }
 
 }

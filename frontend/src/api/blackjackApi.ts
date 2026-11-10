@@ -6,19 +6,38 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  let response: Response
+
+try {
+  response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
     },
   })
+} catch {
+  throw new Error('No se puede conectar con el servidor. Inténtalo de nuevo.')
+}
 
   if (!response.ok) {
-    throw new Error(
-      `Error HTTP ${response.status}: ${response.statusText}`
-    )
+  let message = `Error HTTP ${response.status}: ${response.statusText}`
+
+  try {
+    const errorBody: { error?: string; message?: string } =
+      await response.json()
+
+    message = errorBody.error ?? errorBody.message ?? message
+  } catch {
+    // La respuesta no contiene un JSON válido.
   }
+
+  if (response.status === 409 && endpoint === '/players') {
+    message = 'Este nombre de jugador ya está registrado. Elige otro nombre.'
+  }
+
+  throw new Error(message)
+}
 
   if (response.status === 204) {
     return undefined as T

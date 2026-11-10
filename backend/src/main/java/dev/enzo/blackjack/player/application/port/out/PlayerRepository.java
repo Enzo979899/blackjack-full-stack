@@ -13,4 +13,6 @@ public interface PlayerRepository {
     Mono<Player> findById(UUID playerId);
 
     Flux<Player> findAll();
+
+    Mono<Boolean> existsByNameIgnoreCase(String name);
 }

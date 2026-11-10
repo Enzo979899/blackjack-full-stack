@@ -1,6 +1,7 @@
 package dev.enzo.blackjack.player.application.usecase;
 
 import dev.enzo.blackjack.player.application.dto.CreatePlayerResult;
+import dev.enzo.blackjack.player.application.exception.DuplicatePlayerNameException;
 import dev.enzo.blackjack.player.application.port.in.CreatePlayerUseCase;
 import dev.enzo.blackjack.player.application.port.out.PlayerRepository;
 import dev.enzo.blackjack.player.domain.model.Player;
@@ -19,9 +20,16 @@ public class CreatePlayerService implements CreatePlayerUseCase {
     @Override
     public Mono<CreatePlayerResult> createPlayer(String name) {
         return Mono.defer(() -> {
-            Player player = new Player(UUID.randomUUID(), name);
+            Player player = new Player(UUID.randomUUID(), name.trim());
 
-            return playerRepository.save(player).thenReturn(new CreatePlayerResult(player.getId(), player.getName()));
+            return playerRepository.existsByNameIgnoreCase(player.getName()).flatMap(exists -> {
+                        if (exists) {
+                            return Mono.error(new DuplicatePlayerNameException());
+                        }
+
+                        return playerRepository.save(player)
+                                .thenReturn(new CreatePlayerResult(player.getId(), player.getName()));
+                    });
         });
     }
 
